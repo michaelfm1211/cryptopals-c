@@ -4,7 +4,7 @@ SRCS := $(wildcard *.c)
 OBJS := $(SRCS:.c=.o)
 
 .PHONY: all
-all: 1 2 3
+all: 1 2 3 4
 
 .PHONY: dev
 dev: CFLAGS += -g -fsanitize=address -fsanitize=undefined
@@ -22,4 +22,6 @@ clean:
 2: 2.o common.o
 	$(CC) $(CFLAGS) -o $@ $^
 3: 3.o common.o
+	$(CC) $(CFLAGS) -o $@ $^
+4: 4.o common.o
 	$(CC) $(CFLAGS) -o $@ $^

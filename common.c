@@ -66,11 +66,12 @@ char *to_hex(uint8_t *buf, size_t len) {
 
 double score_english_frequency(uint8_t *pt, size_t len) {
   size_t i;
-  int freq[26];
+  int freq[26], space_cnt;
   double score;
 
   bzero(freq, sizeof(freq));
   score = 0;
+  space_cnt = 0;
   for (i = 0; i < len; i++) {
     if (pt[i] < 32) {
       score += 1;
@@ -78,11 +79,15 @@ double score_english_frequency(uint8_t *pt, size_t len) {
       freq[pt[i] - 'A'] += 1;
     } else if (pt[i] >= 'a' && pt[i] <= 'z') {
       freq[pt[i] - 'a'] += 1;
+    } else if (pt[i] == ' ') {
+      space_cnt += 1;
     }
   }
 
   for (i = 0; i < 26; i++) {
     score += fabs(freq[i] - ideal_freqs[i] * len);
   }
+  // average word length is 4.8, so we should have 1 space per 4.8 chars
+  score += fabs(space_cnt - len / 4.8);
   return score;
 }
