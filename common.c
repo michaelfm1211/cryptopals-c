@@ -44,7 +44,7 @@ uint8_t *from_hex(const char *str, size_t *out_len) {
 static char nibble_to_hex_char(uint8_t nibble) {
   if (nibble <= 9)
     return nibble + '0';
-  return nibble + 'a';
+  return nibble - 10 + 'a';
 }
 
 char *to_hex(uint8_t *buf, size_t len) {
