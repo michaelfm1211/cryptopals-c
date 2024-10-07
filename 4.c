@@ -15,17 +15,6 @@ struct pt {
   double score;
 };
 
-uint8_t *xor(uint8_t *ct, size_t len, uint8_t key) {
-  uint8_t *pt;
-  size_t i;
-
-  pt = malloc(len);
-  memcpy(pt, ct, len);
-  for (i = 0; i < len; i++)
-    pt[i] ^= key;
-  return pt;
-}
-
 int compare_pts(struct pt *a, struct pt *b) {
   return (int)(a->score - b->score);
 }
@@ -33,13 +22,12 @@ int compare_pts(struct pt *a, struct pt *b) {
 struct pt get_best_pt(uint8_t *buf, size_t len) {
   int i;
   struct pt pts[128];
-  
+
   for (i = 0; i < 128; i++) {
-    pts[i].pt = xor(buf, len, i);
+    pts[i].pt = xor_encdec(buf, len, (uint8_t *)&i, 1);
     pts[i].score = score_english_frequency(pts[i].pt, len);
   }
-  qsort(pts, 128, sizeof(struct pt),
-      (int (*)(const void *, const void *))compare_pts);
+  qsort(pts, 128, sizeof(struct pt), (qsort_cmp_t)compare_pts);
   return pts[0];
 }
 
@@ -57,14 +45,28 @@ int main(void) {
   for (i = 0; i < INPUT_LINES; i++) {
     char str[61];
     uint8_t *buf;
+    uint8_t *newline_ch;
 
     fread(str, 1, 61, file);
-    str[59] = '\0';
+    newline_ch = (uint8_t *)strchr(str, '\n');
+    if (!newline_ch) {
+      fprintf(stderr, "No newline on line %zu\n", i);
+    }
+    if ((ptrdiff_t)newline_ch - (ptrdiff_t)str < 60) {
+      size_t foff;
+
+      foff = ftell(file);
+      fseek(file, foff - 60 + (ptrdiff_t)newline_ch - (ptrdiff_t)str, SEEK_SET);
+    }
+    *newline_ch = '\0';
+
     buf = from_hex(str, &buflen);
+    if (buf == NULL) {
+      return 1;
+    }
     pts[i] = get_best_pt(buf, buflen);
   }
-  qsort(pts, INPUT_LINES, sizeof(struct pt),
-      (int (*)(const void *, const void *))compare_pts);
+  qsort(pts, INPUT_LINES, sizeof(struct pt), (qsort_cmp_t)compare_pts);
 
   printf("%.*s\n", (int)buflen, pts[0].pt);
   printf("score: %f\n", pts[0].score);

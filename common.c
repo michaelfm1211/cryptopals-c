@@ -17,8 +17,10 @@ uint8_t *from_hex(const char *str, size_t *out_len) {
 
   len = strlen(str);
   buf = calloc(len / 2 + len % 2, 1);
-  if (!buf)
+  if (!buf) {
+    perror("calloc()");
     return NULL;
+  }
 
   for (i = 0; i < len; i++) {
     uint8_t nibble;
@@ -30,6 +32,9 @@ uint8_t *from_hex(const char *str, size_t *out_len) {
     } else if (str[i] >= 'A' && str[i] <= 'F') {
       nibble = 10 + str[i] - 'A';
     } else {
+      fprintf(stderr,
+              "from_hex(): Invalid character '%c' (0x%x) at position %zu\n",
+              str[i], str[i], i);
       return NULL;
     }
 
@@ -52,8 +57,10 @@ char *to_hex(uint8_t *buf, size_t len) {
   size_t i;
 
   str = malloc(len * 2 + 1);
-  if (!buf)
+  if (!buf) {
+    perror("malloc()");
     return NULL;
+  }
   str[len * 2] = '\0';
 
   for (i = 0; i < len; i++) {
@@ -62,6 +69,18 @@ char *to_hex(uint8_t *buf, size_t len) {
   }
 
   return str;
+}
+
+uint8_t *xor_encdec(uint8_t *buf, size_t buflen, uint8_t *key, size_t keylen) {
+  uint8_t *ct;
+  size_t i;
+
+  ct = malloc(buflen);
+  memcpy(ct, buf, buflen);
+  for (i = 0; i < buflen; i++) {
+    ct[i] ^= key[i % keylen];
+  }
+  return ct;
 }
 
 double score_english_frequency(uint8_t *pt, size_t len) {
@@ -90,4 +109,24 @@ double score_english_frequency(uint8_t *pt, size_t len) {
   // average word length is 4.8, so we should have 1 space per 4.8 chars
   score += fabs(space_cnt - len / 4.8);
   return score;
+}
+
+int hamming_dist(uint8_t *buf1, size_t len1, uint8_t *buf2, size_t len2) {
+  int diff;
+  size_t i;
+
+  if (len1 < len2) {
+    size_t temp;
+
+    temp = len1;
+    len1 = len2;
+    len2 = temp;
+  }
+
+  diff = 0;
+  for (i = 0; i < len2; i++) {
+    diff += __builtin_popcount(buf1[i] ^ buf2[i]);
+  }
+  diff += (len1 - len2) * 8;
+  return diff;
 }

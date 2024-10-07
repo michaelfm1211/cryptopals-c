@@ -3,7 +3,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+typedef int (*qsort_cmp_t)(const void *, const void *);
+
 uint8_t *from_hex(const char *str, size_t *out_len);
 char *to_hex(uint8_t *buf, size_t len);
 
+uint8_t *xor_encdec(uint8_t *buf, size_t buflen, uint8_t *key, size_t keylen);
+
 double score_english_frequency(uint8_t *pt, size_t len);
+int hamming_dist(uint8_t *buf1, size_t len1, uint8_t *buf2, size_t len2);
