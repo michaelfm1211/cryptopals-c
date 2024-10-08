@@ -164,6 +164,18 @@ uint8_t *aes_dec(uint8_t *buf) {
   return out;
 }
 
+uint8_t *aes_cbc_dec(uint8_t *buf, size_t len, uint8_t *iv) {
+  uint8_t *out;
+  size_t i;
+
+  out = malloc(len);
+  for (i = 0; i < len; i += 16) {
+    memcpy(out + i, xor_encdec(aes_dec(buf + i), 16, iv, 16), 16);
+    iv = buf + i;
+  }
+  return out;
+}
+
 uint8_t *pkcs7_pad(uint8_t *buf, size_t len, size_t padlen) {
   uint8_t byte;
   uint8_t *out;

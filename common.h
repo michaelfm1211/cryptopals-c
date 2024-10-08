@@ -12,6 +12,7 @@ uint8_t *xor_encdec(uint8_t *buf, size_t buflen, uint8_t *key, size_t keylen);
 void aes_load_key(uint8_t *key);
 uint8_t *aes_enc(uint8_t *buf);
 uint8_t *aes_dec(uint8_t *buf);
+uint8_t *aes_cbc_dec(uint8_t *buf, size_t len, uint8_t *iv);
 
 uint8_t *pkcs7_pad(uint8_t *buf, size_t len, size_t padlen);
 
