@@ -4,11 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wmmintrin.h> /* AES */
 
 static const double ideal_freqs[] = {
     0.082,  0.015,  0.028, 0.043,  0.127, 0.022,  0.02,  0.061,   0.07,
     0.0015, 0.0077, 0.04,  0.024,  0.067, 0.075,  0.019, 0.00095, 0.06,
     0.063,  0.091,  0.028, 0.0098, 0.024, 0.0015, 0.02,  0.00074};
+
+static __m128i aes_key_sched[20];
 
 uint8_t *from_hex(const char *str, size_t *out_len) {
   size_t len;
@@ -81,6 +84,62 @@ uint8_t *xor_encdec(uint8_t *buf, size_t buflen, uint8_t *key, size_t keylen) {
     ct[i] ^= key[i % keylen];
   }
   return ct;
+}
+
+static __m128i _aes_key_expand(__m128i key, __m128i keygened) {
+  keygened = _mm_shuffle_epi32(keygened, _MM_SHUFFLE(3, 3, 3, 3));
+  key = _mm_xor_si128(key, _mm_slli_si128(key, 4));
+  key = _mm_xor_si128(key, _mm_slli_si128(key, 4));
+  key = _mm_xor_si128(key, _mm_slli_si128(key, 4));
+  return _mm_xor_si128(key, keygened);
+}
+#define aes_key_expand(key, rcon)                                              \
+  _aes_key_expand(key, _mm_aeskeygenassist_si128(key, rcon))
+
+void aes_load_key(uint8_t *key) {
+  aes_key_sched[0] = _mm_loadu_si128((const __m128i *)key);
+  aes_key_sched[1] = aes_key_expand(aes_key_sched[0], 0x01);
+  aes_key_sched[2] = aes_key_expand(aes_key_sched[1], 0x02);
+  aes_key_sched[3] = aes_key_expand(aes_key_sched[2], 0x04);
+  aes_key_sched[4] = aes_key_expand(aes_key_sched[3], 0x08);
+  aes_key_sched[5] = aes_key_expand(aes_key_sched[4], 0x10);
+  aes_key_sched[6] = aes_key_expand(aes_key_sched[5], 0x20);
+  aes_key_sched[7] = aes_key_expand(aes_key_sched[6], 0x40);
+  aes_key_sched[8] = aes_key_expand(aes_key_sched[7], 0x80);
+  aes_key_sched[9] = aes_key_expand(aes_key_sched[8], 0x1B);
+  aes_key_sched[10] = aes_key_expand(aes_key_sched[9], 0x36);
+
+  aes_key_sched[11] = _mm_aesimc_si128(aes_key_sched[9]);
+  aes_key_sched[12] = _mm_aesimc_si128(aes_key_sched[8]);
+  aes_key_sched[13] = _mm_aesimc_si128(aes_key_sched[7]);
+  aes_key_sched[14] = _mm_aesimc_si128(aes_key_sched[6]);
+  aes_key_sched[15] = _mm_aesimc_si128(aes_key_sched[5]);
+  aes_key_sched[16] = _mm_aesimc_si128(aes_key_sched[4]);
+  aes_key_sched[17] = _mm_aesimc_si128(aes_key_sched[3]);
+  aes_key_sched[18] = _mm_aesimc_si128(aes_key_sched[2]);
+  aes_key_sched[19] = _mm_aesimc_si128(aes_key_sched[1]);
+}
+
+uint8_t *aes_dec(uint8_t *buf) {
+  __m128i m;
+  uint8_t *out;
+
+  m = _mm_loadu_si128((__m128i *)buf);
+  m = _mm_xor_si128(m, aes_key_sched[10]);
+  m = _mm_aesdec_si128(m, aes_key_sched[11]);
+  m = _mm_aesdec_si128(m, aes_key_sched[12]);
+  m = _mm_aesdec_si128(m, aes_key_sched[13]);
+  m = _mm_aesdec_si128(m, aes_key_sched[14]);
+  m = _mm_aesdec_si128(m, aes_key_sched[15]);
+  m = _mm_aesdec_si128(m, aes_key_sched[16]);
+  m = _mm_aesdec_si128(m, aes_key_sched[17]);
+  m = _mm_aesdec_si128(m, aes_key_sched[18]);
+  m = _mm_aesdec_si128(m, aes_key_sched[19]);
+  m = _mm_aesdeclast_si128(m, aes_key_sched[0]);
+
+  out = malloc(16);
+  _mm_storeu_si128((__m128i *)out, m);
+  return out;
 }
 
 double score_english_frequency(uint8_t *pt, size_t len) {
