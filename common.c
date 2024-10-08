@@ -120,6 +120,27 @@ void aes_load_key(uint8_t *key) {
   aes_key_sched[19] = _mm_aesimc_si128(aes_key_sched[1]);
 }
 
+uint8_t *aes_enc(uint8_t *buf) {
+  __m128i m;
+  uint8_t *out;
+
+  m = _mm_xor_si128(m, aes_key_sched[0]);
+  m = _mm_aesenc_si128(m, aes_key_sched[1]);
+  m = _mm_aesenc_si128(m, aes_key_sched[2]);
+  m = _mm_aesenc_si128(m, aes_key_sched[3]);
+  m = _mm_aesenc_si128(m, aes_key_sched[4]);
+  m = _mm_aesenc_si128(m, aes_key_sched[5]);
+  m = _mm_aesenc_si128(m, aes_key_sched[6]);
+  m = _mm_aesenc_si128(m, aes_key_sched[7]);
+  m = _mm_aesenc_si128(m, aes_key_sched[8]);
+  m = _mm_aesenc_si128(m, aes_key_sched[9]);
+  m = _mm_aesenclast_si128(m, aes_key_sched[10]);
+
+  out = malloc(16);
+  _mm_storeu_si128((__m128i *)out, m);
+  return out;
+}
+
 uint8_t *aes_dec(uint8_t *buf) {
   __m128i m;
   uint8_t *out;
