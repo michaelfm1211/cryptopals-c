@@ -124,6 +124,7 @@ uint8_t *aes_enc(uint8_t *buf) {
   __m128i m;
   uint8_t *out;
 
+  m = _mm_loadu_si128((__m128i *)buf);
   m = _mm_xor_si128(m, aes_key_sched[0]);
   m = _mm_aesenc_si128(m, aes_key_sched[1]);
   m = _mm_aesenc_si128(m, aes_key_sched[2]);
@@ -160,6 +161,20 @@ uint8_t *aes_dec(uint8_t *buf) {
 
   out = malloc(16);
   _mm_storeu_si128((__m128i *)out, m);
+  return out;
+}
+
+uint8_t *pkcs7_pad(uint8_t *buf, size_t len, size_t padlen) {
+  uint8_t byte;
+  uint8_t *out;
+
+  if (padlen < len || padlen - len > 255) {
+    return NULL;
+  }
+  byte = (uint8_t)(padlen - len);
+  out = malloc(padlen);
+  memcpy(out, buf, len);
+  memset(out + len, byte, padlen - len);
   return out;
 }
 
