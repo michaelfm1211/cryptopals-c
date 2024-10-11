@@ -164,9 +164,55 @@ uint8_t *aes_dec(uint8_t *buf) {
   return out;
 }
 
+uint8_t *aes_ecb_enc(uint8_t *buf, size_t len) {
+  uint8_t *out;
+  size_t i;
+
+  if (len % 16)
+    return NULL;
+
+  out = malloc(len);
+  for (i = 0; i < len; i += 16) {
+    memcpy(out + i, aes_enc(buf + i), 16);
+  }
+  return out;
+}
+
+uint8_t *aes_ecb_dec(uint8_t *buf, size_t len) {
+  uint8_t *out;
+  size_t i;
+
+  if (len % 16)
+    return NULL;
+
+  out = malloc(len);
+  for (i = 0; i < len; i += 16) {
+    memcpy(out + i, aes_dec(buf + i), 16);
+  }
+  return out;
+}
+
+uint8_t *aes_cbc_enc(uint8_t *buf, size_t len, uint8_t *iv) {
+  uint8_t *out;
+  size_t i;
+
+  if (len % 16)
+    return NULL;
+
+  out = malloc(len);
+  for (i = 0; i < len; i += 16) {
+    iv = aes_enc(xor_encdec(buf + i, 16, iv, 16));
+    memcpy(out + i, iv, 16);
+  }
+  return out;
+}
+
 uint8_t *aes_cbc_dec(uint8_t *buf, size_t len, uint8_t *iv) {
   uint8_t *out;
   size_t i;
+
+  if (len % 16)
+    return NULL;
 
   out = malloc(len);
   for (i = 0; i < len; i += 16) {
@@ -187,6 +233,22 @@ uint8_t *pkcs7_pad(uint8_t *buf, size_t len, size_t padlen) {
   out = malloc(padlen);
   memcpy(out, buf, len);
   memset(out + len, byte, padlen - len);
+  return out;
+}
+
+uint8_t *rand_16bytes(void) {
+  uint8_t *out;
+  uint32_t r;
+
+  out = malloc(16);
+  r = rand();
+  memcpy(out, &r, 4);
+  r = rand();
+  memcpy(out + 4, &r, 4);
+  r = rand();
+  memcpy(out + 8, &r, 4);
+  r = rand();
+  memcpy(out + 12, &r, 4);
   return out;
 }
 
